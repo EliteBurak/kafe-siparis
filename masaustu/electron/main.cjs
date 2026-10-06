@@ -17,7 +17,7 @@ function createWindow() {
     height: 880,
     minWidth: 1100,
     minHeight: 700,
-    title: 'Kafe Sipariş',
+    title: 'Restoran Sipariş',
     backgroundColor: '#fafaf9',
     autoHideMenuBar: true,
     webPreferences: {

@@ -8,13 +8,16 @@ const aktifMi = (o) => !o.paid && o.status !== 'iptal'
 /**
  * Ödenmemiş ve iptal edilmemiş siparişleri tutar, Supabase Realtime ile canlı günceller.
  * Bağlantı koparsa yeniden bağlanınca listeyi baştan çeker; ayrıca 60 sn'de bir yedek yenileme yapar.
+ * Başka bir personelin girdiği sipariş gelince zil çalar (ör. garson girer, kasada duyulur).
  */
-export function useSiparisler() {
+export function useSiparisler(rid, kullaniciId) {
   const [siparisler, setSiparisler] = useState([])
   const [yukleniyor, setYukleniyor] = useState(true)
   const [baglanti, setBaglanti] = useState('baglaniyor') // baglaniyor | canli | kopuk
   const [yeniIdler, setYeniIdler] = useState(() => new Set())
   const ilkYukleme = useRef(true)
+  const kullaniciIdRef = useRef(kullaniciId)
+  kullaniciIdRef.current = kullaniciId
   const siparislerRef = useRef(siparisler)
   siparislerRef.current = siparisler
 
@@ -22,20 +25,23 @@ export function useSiparisler() {
     const { data, error } = await supabase
       .from('orders')
       .select(SECIM)
+      .eq('restaurant_id', rid)
       .eq('paid', false)
       .neq('status', 'iptal')
       .order('created_at', { ascending: true })
     if (!error) setSiparisler(data)
     setYukleniyor(false)
     ilkYukleme.current = false
-  }, [])
+  }, [rid])
 
   useEffect(() => {
+    setSiparisler([])
+    setYukleniyor(true)
     yenile()
 
     const kanal = supabase
-      .channel('siparisler')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async (d) => {
+      .channel(`siparisler-${rid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` }, async (d) => {
         if (d.eventType === 'DELETE') {
           setSiparisler((l) => l.filter((o) => o.id !== d.old.id))
           return
@@ -45,9 +51,9 @@ export function useSiparisler() {
           const { data } = await supabase.from('orders').select(SECIM).eq('id', d.new.id).single()
           if (!data || !aktifMi(data)) return
           setSiparisler((l) => (l.some((o) => o.id === data.id) ? l : [...l, data]))
-          if (data.source === 'qr') {
+          if (data.created_by !== kullaniciIdRef.current) {
             zilCal()
-            masaustuBildirimi(`Yeni sipariş – ${data.table_name}`, `${data.order_items.length} kalem`)
+            masaustuBildirimi(`Yeni sipariş – ${data.table_name}`, `${data.created_by_name || 'Personel'}, ${data.order_items.length} kalem`)
             setYeniIdler((s) => new Set(s).add(data.id))
             setTimeout(() => setYeniIdler((s) => { const n = new Set(s); n.delete(data.id); return n }), 4000)
           }
@@ -75,7 +81,7 @@ export function useSiparisler() {
       clearInterval(zamanlayici)
       supabase.removeChannel(kanal)
     }
-  }, [yenile])
+  }, [yenile, rid])
 
   /** Durumu hemen ekranda değiştirir, sunucu hata verirse geri alır (iyimser güncelleme). */
   const durumDegistir = useCallback(async (id, status) => {

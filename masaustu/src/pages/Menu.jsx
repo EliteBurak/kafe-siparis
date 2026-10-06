@@ -3,11 +3,13 @@ import { Plus, Pencil, Trash2, BookOpen, Eye, EyeOff, ImagePlus, ImageOff, Loade
 import { useVeri } from '../hooks/useVeri'
 import { supabase, hataMesaji } from '../lib/supabase'
 import { tl, fiyatOku } from '../lib/format'
+import { useRestoran } from '../hooks/useRestoran'
 import { fotoYukle, fotoSil } from '../lib/foto'
 import { Alan, Bos, Buton, IkonButon, Modal, Rozet, SayfaBasligi, girdiSinifi, useUyari } from '../components/ui'
 
 export default function Menu() {
   const { kategoriler, urunler, yenile } = useVeri()
+  const { pro } = useRestoran()
   const { goster, sor } = useUyari()
   const [secili, setSecili] = useState(null)
   const [kategoriFormu, setKategoriFormu] = useState(null)
@@ -34,7 +36,7 @@ export default function Menu() {
 
   return (
     <>
-      <SayfaBasligi baslik="Menü" aciklama="Burada yaptığın değişiklikler QR menüde hemen görünür.">
+      <SayfaBasligi baslik="Menü" aciklama={`Değişiklikler QR menüde hemen görünür.${pro ? '' : ` Ücretsiz sürümde ${urunler.length}/40 ürün kullanılıyor.`}`}>
         <Buton tur="ikincil" ikon={Plus} onClick={() => setKategoriFormu({})}>Kategori</Buton>
         <Buton ikon={Plus} disabled={!kategoriler.length} onClick={() => setUrunFormu({ category_id: seciliId })}>Ürün ekle</Buton>
       </SayfaBasligi>
@@ -44,12 +46,12 @@ export default function Menu() {
           <Buton ikon={Plus} className="mt-2" onClick={() => setKategoriFormu({})}>Kategori ekle</Buton>
         </Bos>
       ) : (
-        <div className="flex gap-6">
-          <ul className="flex w-64 shrink-0 flex-col gap-1" aria-label="Kategoriler">
+        <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+          <ul className="flex shrink-0 gap-1 overflow-x-auto md:w-64 md:flex-col" aria-label="Kategoriler">
             {kategoriler.map((k) => {
               const adet = urunler.filter((u) => u.category_id === k.id).length
               return (
-                <li key={k.id}>
+                <li key={k.id} className="shrink-0 md:shrink">
                   <button
                     onClick={() => setSecili(k.id)}
                     aria-current={k.id === seciliId ? 'true' : undefined}
@@ -85,7 +87,8 @@ export default function Menu() {
                 <Buton ikon={Plus} className="mt-2" onClick={() => setUrunFormu({ category_id: seciliId })}>Ürün ekle</Buton>
               </Bos>
             ) : (
-              <table className="w-full text-left">
+              <div className="-mx-5 overflow-x-auto px-5">
+              <table className="w-full min-w-[480px] text-left">
                 <thead className="border-b border-stone-200 text-sm text-stone-600">
                   <tr>
                     <th className="pb-2 font-semibold">Ürün</th>
@@ -122,6 +125,7 @@ export default function Menu() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
         </div>
@@ -145,6 +149,7 @@ function useForm(kayit, bosHal) {
 
 function KategoriFormu({ kayit, kapat, kaydedildi, siradaki }) {
   const { goster } = useUyari()
+  const { restoran } = useRestoran()
   const [d, set] = useForm(kayit, { name: '', sort_order: siradaki })
   const [bekliyor, setBekliyor] = useState(false)
 
@@ -154,7 +159,7 @@ function KategoriFormu({ kayit, kapat, kaydedildi, siradaki }) {
     const veri = { name: d.name.trim(), sort_order: Number(d.sort_order) || 0 }
     const { error } = kayit.id
       ? await supabase.from('categories').update(veri).eq('id', kayit.id)
-      : await supabase.from('categories').insert(veri)
+      : await supabase.from('categories').insert({ ...veri, restaurant_id: restoran.id })
     setBekliyor(false)
     if (error) return goster(hataMesaji(error), 'hata')
     goster('Kategori kaydedildi')
@@ -175,6 +180,7 @@ function KategoriFormu({ kayit, kapat, kaydedildi, siradaki }) {
 
 function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
   const { goster } = useUyari()
+  const { restoran } = useRestoran()
   const [d, set] = useForm(kayit, { name: '', description: '', price: '', category_id: '', image_url: '', sort_order: 0, active: true })
   const [hata, setHata] = useState('')
   const [bekliyor, setBekliyor] = useState(false)
@@ -196,7 +202,7 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
     }
     const { error } = kayit.id
       ? await supabase.from('products').update(veri).eq('id', kayit.id)
-      : await supabase.from('products').insert(veri)
+      : await supabase.from('products').insert({ ...veri, restaurant_id: restoran.id })
     setBekliyor(false)
     if (error) return goster(hataMesaji(error), 'hata')
     // Fotoğraf değiştiyse eskisini depodan sil
@@ -209,11 +215,11 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
   return (
     <Modal acik={!!kayit} kapat={kapat} baslik={kayit?.id ? 'Ürünü düzenle' : 'Yeni ürün'}
       alt={<><Buton tur="ikincil" onClick={kapat}>Vazgeç</Buton><Buton type="submit" form="urun-form" yukleniyor={bekliyor}>Kaydet</Buton></>}>
-      <form id="urun-form" onSubmit={kaydet} className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
+      <form id="urun-form" onSubmit={kaydet} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <Alan etiket="Ürün adı">{(id) => <input id={id} required maxLength={80} value={d.name} onChange={(e) => set({ name: e.target.value })} className={girdiSinifi} />}</Alan>
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <Alan etiket="Açıklama" ipucu="İsteğe bağlı. Müşteri ürüne dokununca görür.">{(id) => <input id={id} maxLength={160} value={d.description} onChange={(e) => set({ description: e.target.value })} className={girdiSinifi} />}</Alan>
         </div>
         <Alan etiket="Fiyat (₺)" hata={hata}>{(id) => <input id={id} required inputMode="decimal" value={d.price} onChange={(e) => set({ price: e.target.value })} className={girdiSinifi} />}</Alan>
@@ -224,8 +230,8 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
             </select>
           )}
         </Alan>
-        <div className="col-span-2">
-          <FotoSecici adres={d.image_url} ad={d.name} degisti={(image_url) => set({ image_url })} />
+        <div className="sm:col-span-2">
+          <FotoSecici adres={d.image_url} ad={d.name} rid={restoran.id} degisti={(image_url) => set({ image_url })} />
         </div>
         <Alan etiket="Sıra">{(id) => <input id={id} type="number" value={d.sort_order} onChange={(e) => set({ sort_order: e.target.value })} className={girdiSinifi} />}</Alan>
         <label className="flex items-center gap-3 self-end pb-2.5 font-medium">
@@ -247,7 +253,7 @@ function Kucukresim({ u }) {
   )
 }
 
-function FotoSecici({ adres, ad, degisti }) {
+function FotoSecici({ adres, ad, rid, degisti }) {
   const { goster } = useUyari()
   const girdi = useRef(null)
   const [yukleniyor, setYukleniyor] = useState(false)
@@ -258,7 +264,7 @@ function FotoSecici({ adres, ad, degisti }) {
     if (!dosya) return
     setYukleniyor(true)
     try {
-      degisti(await fotoYukle(dosya))
+      degisti(await fotoYukle(dosya, rid))
     } catch (err) {
       goster(hataMesaji(err), 'hata')
     }

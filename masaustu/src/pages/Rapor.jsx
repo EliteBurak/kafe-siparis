@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
 import { supabase, hataMesaji } from '../lib/supabase'
 import { tl } from '../lib/format'
+import { useRestoran } from '../hooks/useRestoran'
 import { Bos, IkonButon, SayfaBasligi, girdiSinifi, useUyari } from '../components/ui'
 
 const gunMetni = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 export default function Rapor() {
   const { goster } = useUyari()
+  const { restoran, pro } = useRestoran()
   const [gun, setGun] = useState(() => gunMetni(new Date()))
   const [siparisler, setSiparisler] = useState(null)
 
@@ -19,7 +21,8 @@ export default function Rapor() {
     bit.setDate(bit.getDate() + 1)
     supabase
       .from('orders')
-      .select('id, status, paid, total, created_at, order_items(product_name, quantity, unit_price)')
+      .select('id, status, paid, total, created_at, created_by_name, order_items(product_name, quantity, unit_price)')
+      .eq('restaurant_id', restoran.id)
       .gte('created_at', bas.toISOString())
       .lt('created_at', bit.toISOString())
       .then(({ data, error }) => {
@@ -28,7 +31,7 @@ export default function Rapor() {
         setSiparisler(data ?? [])
       })
     return () => { iptal = true }
-  }, [gun, goster])
+  }, [gun, goster, restoran.id])
 
   const ozet = useMemo(() => {
     if (!siparisler) return null
@@ -37,7 +40,13 @@ export default function Rapor() {
     const tahsil = gecerli.filter((o) => o.paid).reduce((t, o) => t + Number(o.total), 0)
     const saatler = new Array(24).fill(0)
     const urunler = new Map()
+    const personel = new Map()
     for (const o of gecerli) {
+      const ad = o.created_by_name || 'Bilinmiyor'
+      const p = personel.get(ad) ?? { ad, adet: 0, tutar: 0 }
+      p.adet += 1
+      p.tutar += Number(o.total)
+      personel.set(ad, p)
       saatler[new Date(o.created_at).getHours()] += Number(o.total)
       for (const k of o.order_items) {
         const u = urunler.get(k.product_name) ?? { ad: k.product_name, adet: 0, tutar: 0 }
@@ -55,6 +64,7 @@ export default function Rapor() {
       iptal: siparisler.length - gecerli.length,
       saatler,
       urunler: [...urunler.values()].sort((a, b) => b.tutar - a.tutar),
+      personel: [...personel.values()].sort((a, b) => b.tutar - a.tutar),
     }
   }, [siparisler])
 
@@ -67,13 +77,18 @@ export default function Rapor() {
   return (
     <>
       <SayfaBasligi baslik="Rapor" aciklama="Seçilen günün satışları (iptal edilen siparişler hariç).">
-        <IkonButon etiket="Önceki gün" ikon={ChevronLeft} onClick={() => kaydir(-1)} />
-        <input type="date" aria-label="Gün" value={gun} max={gunMetni(new Date())} onChange={(e) => e.target.value && setGun(e.target.value)} className={`${girdiSinifi} w-44`} />
-        <IkonButon etiket="Sonraki gün" ikon={ChevronRight} onClick={() => kaydir(1)} disabled={gun >= gunMetni(new Date())} />
+        {pro && (
+          <>
+            <IkonButon etiket="Önceki gün" ikon={ChevronLeft} onClick={() => kaydir(-1)} />
+            <input type="date" aria-label="Gün" value={gun} max={gunMetni(new Date())} onChange={(e) => e.target.value && setGun(e.target.value)} className={`${girdiSinifi} w-44`} />
+            <IkonButon etiket="Sonraki gün" ikon={ChevronRight} onClick={() => kaydir(1)} disabled={gun >= gunMetni(new Date())} />
+          </>
+        )}
       </SayfaBasligi>
+      {!pro && <p className="-mt-3 mb-5 text-sm text-stone-600">Ücretsiz sürümde bugünün raporu görünür. Geçmiş günler Pro sürümde.</p>}
 
       {/* Sabit yükseklik: veri gelirken sayfa zıplamasın */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         <Kutu baslik="Toplam ciro" deger={ozet && tl(ozet.ciro)} alt={ozet && `${tl(ozet.tahsil)} tahsil edildi, ${tl(ozet.acik)} açık hesapta`} />
         <Kutu baslik="Sipariş sayısı" deger={ozet?.adet} alt={ozet && (ozet.iptal ? `${ozet.iptal} iptal` : 'İptal yok')} />
         <Kutu baslik="Ortalama sipariş" deger={ozet && tl(ozet.ortalama)} />
@@ -83,13 +98,13 @@ export default function Rapor() {
       {ozet && ozet.adet === 0 ? (
         <div className="mt-6"><Bos ikon={BarChart3} baslik="Bu gün satış yok" /></div>
       ) : (
-        <div className="mt-6 grid grid-cols-5 gap-6">
-          <section className="col-span-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-5">
+          <section className="rounded-2xl xl:col-span-3 bg-white p-5 shadow-sm ring-1 ring-stone-200">
             <h2 className="font-bold">Saatlik ciro</h2>
             <p className="mb-4 text-sm text-stone-600">Siparişin verildiği saate göre</p>
             {ozet ? <SaatGrafigi saatler={ozet.saatler} /> : <div className="h-64 animate-pulse rounded-lg bg-stone-100" />}
           </section>
-          <section className="col-span-2 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+          <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200 xl:col-span-2">
             <h2 className="mb-3 font-bold">Ürün satışları</h2>
             {ozet ? (
               <table className="w-full text-left text-sm">
@@ -104,6 +119,21 @@ export default function Rapor() {
               </table>
             ) : <div className="h-64 animate-pulse rounded-lg bg-stone-100" />}
           </section>
+          {ozet && ozet.personel.length > 0 && (
+            <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200 xl:col-span-5">
+              <h2 className="mb-3 font-bold">Personel</h2>
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-stone-200 text-stone-600">
+                  <tr><th className="pb-2 font-semibold">Siparişi alan</th><th className="pb-2 text-right font-semibold">Sipariş</th><th className="pb-2 text-right font-semibold">Tutar</th></tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {ozet.personel.map((p) => (
+                    <tr key={p.ad}><td className="py-2 font-medium">{p.ad}</td><td className="py-2 text-right tabular-nums">{p.adet}</td><td className="py-2 text-right tabular-nums">{tl(p.tutar)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
         </div>
       )}
     </>
@@ -112,12 +142,12 @@ export default function Rapor() {
 
 function Kutu({ baslik, deger, alt }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+    <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200 md:p-5">
       <p className="text-sm font-semibold text-stone-600">{baslik}</p>
       {deger === undefined || deger === null ? (
         <div className="mt-2 h-8 w-28 animate-pulse rounded bg-stone-100" />
       ) : (
-        <p className="mt-1 truncate text-3xl font-bold tabular-nums tracking-tight" title={String(deger)}>{deger}</p>
+        <p className="mt-1 truncate text-2xl font-bold tabular-nums tracking-tight md:text-3xl" title={String(deger)}>{deger}</p>
       )}
       <p className="mt-1 min-h-5 text-sm text-stone-600">{alt}</p>
     </div>

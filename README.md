@@ -1,57 +1,69 @@
-# Kafe Sipariş
+# Restoran Sipariş
 
-Kafeler için QR menü + sipariş yönetimi.
+Restoranlar için adisyon ve sipariş yönetimi + müşteriye QR menü. Birden fazla restoran aynı sistemi kullanabilir; her restoranın verisi birbirinden tamamen ayrıdır.
 
 | Klasör | Ne işe yarar |
 |---|---|
-| `supabase/kurulum.sql` | Veritabanı tabloları, güvenlik kuralları, sipariş fonksiyonları |
-| `masaustu/` | Kasadaki bilgisayarda çalışan Windows uygulaması (Electron + React) |
-| `qr-menu/` | Müşterinin telefonda açtığı menü sayfası (React) |
+| `supabase/kurulum.sql` | Veritabanı: restoranlar, roller, menü, masalar, siparişler, güvenlik kuralları, sürüm limitleri |
+| `masaustu/` | Yönetim paneli. Windows programı olarak **ve** web'de (telefon/tablet) aynı kodla çalışır |
+| `qr-menu/` | Müşterinin telefonda gördüğü menü (sadece görüntüleme) |
+| `docs/plans/` | Tasarım kararları |
 
-## Masaüstü uygulamasını çalıştırma
+## Roller
 
-VS Code'da **Terminal → New Terminal** aç ve şunları yaz:
+| Rol | Yapabildikleri |
+|---|---|
+| **Restoran sahibi** | Her şey: menü, masalar, personel, ayarlar, rapor, hesap kapatma |
+| **Kasiyer** | Sipariş alır, hesap kapatır, raporu görür. Menüyü değiştiremez |
+| **Garson** | Telefondan sipariş girer, masaları görür. Hesap kapatamaz |
 
+Her siparişte siparişi alan kişinin adı kayıtlıdır. Yetkiler veritabanında kontrol edilir; programı kurcalayarak aşılamaz.
+
+## Sürümler
+
+| | Ücretsiz | Pro |
+|---|---|---|
+| Masa | 10 | Sınırsız |
+| Ürün | 40 | Sınırsız |
+| Personel hesabı | Sadece sahip | Kasiyer ve garsonlar |
+| Rapor | Bugün | Geçmiş günler |
+| QR menü | "Restoran Sipariş ile hazırlandı" yazısıyla | Yazısız |
+
+Ödeme sistemi gelene kadar bir restoranı Pro yapmak için SQL Editor'da:
+
+```sql
+update public.restaurants set plan = 'pro' where slug = 'restoranin-kisa-adi';
+```
+
+## Çalıştırma
+
+**Windows programı:**
 ```
 cd masaustu
 npm install
 npm start
 ```
 
-`npm install` sadece ilk sefer (ve paket değişince) gerekir. Sonraki açılışlarda `npm start` yeterli.
+**Web (telefon/tablet):** Kod GitHub'a gönderilince otomatik yayınlanır:
 
-Kurulum dosyası (.exe) üretmek için: `npm run paketle` → `masaustu/cikti/` klasörüne düşer.
+- Panel: `https://eliteburak.github.io/kafe-siparis/panel/`
+- Müşteri menüsü: `https://eliteburak.github.io/kafe-siparis/?r=<restoran-kisa-adi>` (bağlantı ve QR kod panelde **Ayarlar** sayfasında)
 
-## QR menüyü bilgisayarda deneme
+## Yeni restoran ve personel
 
-```
-cd qr-menu
-npm install
-npm run dev
-```
+1. Restoran sahibi uygulamada **Hesap oluştur** der, ardından **Restoranımı kur**.
+2. Sahip **Personel → Personel davet et** ile kişinin adını, e-postasını ve görevini girer. Ekranda 8 haneli bir davet kodu çıkar.
+3. Personel aynı e-postayla **Hesap oluştur** der, **Davet koduyla katıl**'a kodu yazar.
 
-Terminalde çıkan `http://localhost:5173/` adresinin sonuna `?masa=MASAKODU` ekleyip tarayıcıda aç.
-Masa kodunu masaüstü uygulamasında **Masalar → QR simgesi** penceresindeki adresten görebilirsin.
+## Supabase ayarları
 
-## QR menüyü internette yayınlama (GitHub Pages)
+- **Authentication → Sign In / Providers → Allow new users to sign up:** açık olmalı (restoran sahipleri ve personel kendi hesabını açar).
+- **Confirm email:** Test aşamasında kapatılabilir. Satışa çıkarken açık olmalı ve **Authentication → Emails → SMTP Settings** bölümünden kendi e-posta servisin (örn. Resend, Brevo) bağlanmalı; Supabase'in hazır e-posta servisi çok sınırlıdır.
 
-`.github/workflows/qr-menu.yml` dosyası, kod GitHub'a gönderilince menüyü otomatik yayınlar.
-Yayın adresi `https://KULLANICIADI.github.io/DEPOADI/` olur; bu adresi masaüstü uygulamasında **Ayarlar → QR menü adresi** alanına yaz.
+## Güvenlik
 
-## Güvenlik notları
-
-- Koddaki Supabase anahtarı (`sb_publishable_...`) herkese açık olacak şekilde tasarlanmıştır.
-- **Secret / service_role anahtarını asla koda yazma.**
-- Müşteriler sadece menüyü okuyabilir ve sipariş verebilir. Fiyatı veritabanı hesaplar, başkasının siparişini göremezler.
-- Bir masadan 10 dakikada en fazla 8 sipariş verilebilir. Bir siparişte en fazla 100 ürün olabilir.
-- Yönetim (menü, masa, sipariş, fotoğraf) sadece `staff` listesindeki kullanıcılara açıktır. Giriş yapmış olmak tek başına yetmez.
-- Supabase'de **Authentication → Sign In / Providers → Allow new users to sign up** kapalı olmalı.
-
-### Yeni personel eklemek
-
-1. Supabase'de **Authentication → Users → Add user** ile kullanıcıyı oluştur.
-2. **SQL Editor**'da şunu çalıştır (e-postayı değiştir):
-   ```sql
-   insert into public.staff (user_id)
-   select id from auth.users where email = 'personel@ornek.com';
-   ```
+- Koddaki Supabase anahtarı (`sb_publishable_...`) herkese açık olacak şekilde tasarlanmıştır. **Secret / service_role anahtarını asla koda yazma.**
+- Her tablo satır düzeyinde güvenlikle (RLS) korunur: bir kişi sadece üyesi olduğu restoranın verisini görür.
+- Plan, sipariş tutarı ve fiyatlar kullanıcı tarafından değiştirilemez; sipariş tutarını veritabanı hesaplar.
+- Davet kodu sadece davetteki e-postayla açılmış hesapta çalışır.
+- Ürün fotoğraflarını sadece o restoranın sahibi yükleyip silebilir.

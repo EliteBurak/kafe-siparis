@@ -1,10 +1,12 @@
-# qr-menu klasöründe değişiklik olunca müşteri menüsünü GitHub Pages'e yayınlar.
-name: QR menüyü yayınla
+# Kod GitHub'a gönderilince iki şeyi yayınlar:
+#   - Müşteri QR menüsü:  https://<kullanici>.github.io/<depo>/?r=<restoran>
+#   - Yönetim paneli:     https://<kullanici>.github.io/<depo>/panel/
+name: Menü ve paneli yayınla
 
 on:
   push:
     branches: [main]
-    paths: ['qr-menu/**', '.github/workflows/qr-menu.yml']
+    paths: ['qr-menu/**', 'masaustu/**', '.github/workflows/qr-menu.yml']
   workflow_dispatch:
 
 permissions:
@@ -22,21 +24,31 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    defaults:
-      run:
-        working-directory: qr-menu
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: qr-menu/package-lock.json
-      - run: npm ci
-      - run: npm run build
+          cache-dependency-path: |
+            qr-menu/package-lock.json
+            masaustu/package-lock.json
+      - name: QR menüyü derle
+        working-directory: qr-menu
+        run: npm ci && npm run build
+      - name: Paneli derle
+        working-directory: masaustu
+        run: npm ci && npm run build
+      - name: Siteyi birleştir
+        run: |
+          mkdir -p site/panel
+          cp -r qr-menu/dist/. site/
+          cp -r masaustu/dist/. site/panel/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: qr-menu/dist
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

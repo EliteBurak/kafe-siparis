@@ -23,11 +23,12 @@ async function hazirla(dosya, boyut = 900) {
 }
 
 /** Fotoğrafı yükler ve herkese açık adresini döndürür. */
-export async function fotoYukle(dosya) {
+export async function fotoYukle(dosya, rid) {
   if (!dosya.type.startsWith('image/')) throw new Error('Lütfen bir resim dosyası seç (JPG, PNG veya WebP).')
   if (dosya.size > 25 * 1024 * 1024) throw new Error('Fotoğraf çok büyük (en fazla 25 MB).')
   const blob = await hazirla(dosya)
-  const ad = `${crypto.randomUUID()}.webp`
+  // Restoran klasörüne yüklenir; veritabanı sadece o restoranın sahibine izin verir
+  const ad = `${rid}/${crypto.randomUUID()}.webp`
   const { error } = await supabase.storage.from(KOVA).upload(ad, blob, { contentType: 'image/webp', cacheControl: '31536000' })
   if (error) throw error
   return supabase.storage.from(KOVA).getPublicUrl(ad).data.publicUrl

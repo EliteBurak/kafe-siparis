@@ -58,8 +58,8 @@ export function Alan({ etiket, ipucu, hata, children }) {
 export const girdiSinifi =
   'h-11 w-full rounded-lg border border-stone-300 bg-white px-3 text-[15px] text-stone-900 placeholder:text-stone-500 transition-colors duration-150 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200'
 
-export function Rozet({ className = '', children }) {
-  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${className}`}>{children}</span>
+export function Rozet({ className = '', children, ...p }) {
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset ${className}`} {...p}>{children}</span>
 }
 
 export function Modal({ acik, kapat, baslik, children, alt, genis }) {
@@ -77,14 +77,14 @@ export function Modal({ acik, kapat, baslik, children, alt, genis }) {
   }, [acik])
   if (!acik) return null
   return (
-    <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-6" onMouseDown={(e) => e.target === e.currentTarget && kapat()}>
-      <div ref={ref} role="dialog" aria-modal="true" aria-label={baslik} className={`flex max-h-full w-full flex-col rounded-2xl bg-white shadow-2xl ${genis ? 'max-w-3xl' : 'max-w-lg'}`}>
+    <div className="no-print fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && kapat()}>
+      <div ref={ref} role="dialog" aria-modal="true" aria-label={baslik} className={`flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl sm:max-h-full sm:rounded-2xl ${genis ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
         <div className="flex items-center justify-between border-b border-stone-200 px-6 py-4">
           <h2 className="text-lg font-bold">{baslik}</h2>
           <IkonButon etiket="Kapat" ikon={X} onClick={kapat} />
         </div>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
-        {alt && <div className="flex justify-end gap-2 border-t border-stone-200 px-6 py-4">{alt}</div>}
+        {alt && <div className="flex justify-end gap-2 border-t border-stone-200 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{alt}</div>}
       </div>
     </div>
   )
@@ -139,7 +139,7 @@ export function UyariSaglayici({ children }) {
   return (
     <UyariCtx.Provider value={{ goster, sor }}>
       {children}
-      <div className="no-print pointer-events-none fixed right-6 bottom-6 z-[60] flex flex-col gap-2" aria-live="polite">
+      <div className="no-print pointer-events-none fixed right-4 bottom-20 z-[60] md:right-6 md:bottom-6 flex flex-col gap-2" aria-live="polite">
         {liste.map((u) => (
           <div
             key={u.id}

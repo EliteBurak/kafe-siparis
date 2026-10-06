@@ -1,8 +1,8 @@
 {
   "name": "kafe-siparis-masaustu",
-  "productName": "Kafe Sipariş",
+  "productName": "Restoran Sipariş",
   "version": "0.1.0",
-  "description": "Kafeler için sipariş yönetimi (kasa / mutfak ekranı)",
+  "description": "Restoranlar için adisyon ve sipariş yönetimi",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -29,8 +29,8 @@
     "vite": "^8.3.3"
   },
   "build": {
-    "appId": "com.kafesiparis.masaustu",
-    "productName": "Kafe Sipariş",
+    "appId": "com.restoransiparis.panel",
+    "productName": "Restoran Sipariş",
     "directories": { "output": "cikti" },
     "files": ["dist/**", "electron/**"],
     "win": { "target": "nsis" },

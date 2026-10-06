@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useState } from 'react'
-import { Clock, QrCode, UserRound, MessageSquareText, XCircle, RefreshCw, Inbox } from 'lucide-react'
+import { Clock, UserRound, MessageSquareText, XCircle, RefreshCw, Inbox } from 'lucide-react'
 import { DURUMLAR, gecenSure, saatYaz, tl } from '../lib/format'
 import { hataMesaji } from '../lib/supabase'
 import { Buton, IkonButon, Rozet, SayfaBasligi, useUyari } from '../components/ui'
@@ -35,15 +35,15 @@ export default function Siparisler({ siparisler, yukleniyor, yeniIdler, yenile, 
 
   return (
     <>
-      <SayfaBasligi baslik="Siparişler" aciklama="QR menüden gelen siparişler buraya anında düşer ve zil çalar.">
+      <SayfaBasligi baslik="Siparişler" aciklama="Personelin girdiği siparişler buraya anında düşer. Başkası sipariş girince zil çalar.">
         <Buton tur="ikincil" boyut="kucuk" ikon={RefreshCw} onClick={yenile}>Yenile</Buton>
       </SayfaBasligi>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {SUTUNLAR.map((durum) => {
           const liste = siparisler.filter((o) => o.status === durum)
           return (
-            <section key={durum} className="flex min-h-[60vh] flex-col rounded-2xl bg-stone-100 p-3" aria-label={DURUMLAR[durum].ad}>
+            <section key={durum} className="flex lg:min-h-[60vh] flex-col rounded-2xl bg-stone-100 p-3" aria-label={DURUMLAR[durum].ad}>
               <header className="mb-3 flex items-center justify-between px-2 pt-1">
                 <h2 className="font-bold">{DURUMLAR[durum].ad}</h2>
                 <Rozet className={DURUMLAR[durum].renk}>{liste.length}</Rozet>
@@ -89,9 +89,9 @@ const SiparisKarti = memo(function SiparisKarti({ o, simdi, yeni, ilerlet, iptal
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Rozet className={o.source === 'qr' ? 'bg-brand-50 text-brand-800 ring-brand-200' : 'bg-stone-100 text-stone-700 ring-stone-200'}>
-            {o.source === 'qr' ? <QrCode className="mr-1 size-3" aria-hidden /> : <UserRound className="mr-1 size-3" aria-hidden />}
-            {o.source === 'qr' ? 'QR' : 'Garson'}
+          <Rozet className="bg-stone-100 text-stone-700 ring-stone-200" title="Siparişi alan">
+            <UserRound className="mr-1 size-3" aria-hidden />
+            {o.created_by_name || 'Personel'}
           </Rozet>
           <IkonButon etiket="Siparişi iptal et" ikon={XCircle} onClick={() => iptal(o)} className="hover:text-red-700" />
         </div>
