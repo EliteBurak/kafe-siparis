@@ -149,15 +149,19 @@ function Vitrin({ menu, sepet, adetDegistir, ac }) {
   )
   const [aktif, setAktif] = useState(kategoriler[0]?.id)
   const sekmeRef = useRef(null)
+  // Sekmeye basınca yapılan otomatik kaydırma sürerken, kaydırma takibi aktif sekmeyi değiştirmesin
+  const kilit = useRef(0)
 
   // Kaydırdıkça aktif kategoriyi bul: üst kenarı sekmelerin altına geçmiş son bölüm
   useEffect(() => {
     let kare = 0
     const hesapla = () => {
       kare = 0
+      if (Date.now() < kilit.current) return
       const bolumler = document.querySelectorAll('[data-kategori]')
+      const sinir = (sekmeRef.current?.offsetHeight ?? 56) + 24
       let secilen = bolumler[0]
-      for (const el of bolumler) if (el.getBoundingClientRect().top <= 90) secilen = el
+      for (const el of bolumler) if (el.getBoundingClientRect().top <= sinir) secilen = el
       if (secilen) setAktif(Number(secilen.dataset.id))
     }
     const dinle = () => { if (!kare) kare = requestAnimationFrame(hesapla) }
@@ -169,9 +173,23 @@ function Vitrin({ menu, sepet, adetDegistir, ac }) {
     }
   }, [kategoriler])
 
+  // Aktif sekmeyi şeritte ortala. Sadece şeridi YATAY kaydırır;
+  // scrollIntoView kullanmıyoruz çünkü sayfayı da dikey kaydırıp kullanıcının kaydırmasıyla çakışıyordu.
   useEffect(() => {
-    sekmeRef.current?.querySelector(`[data-sekme="${aktif}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+    const serit = sekmeRef.current
+    const sekme = serit?.querySelector(`[data-sekme="${aktif}"]`)
+    if (!serit || !sekme) return
+    serit.scrollTo({ left: sekme.offsetLeft - (serit.clientWidth - sekme.offsetWidth) / 2, behavior: 'smooth' })
   }, [aktif])
+
+  function kategoriyeGit(id) {
+    const bolum = document.getElementById(`k-${id}`)
+    if (!bolum) return
+    setAktif(id)
+    kilit.current = Date.now() + 900
+    const hedef = bolum.getBoundingClientRect().top + window.scrollY - (sekmeRef.current?.offsetHeight ?? 56) + 1
+    window.scrollTo({ top: hedef, behavior: 'smooth' })
+  }
 
   if (!kategoriler.length) return <p className="px-5 py-16 text-center text-gri">Menü henüz hazır değil. Siparişinizi garsona verebilirsiniz.</p>
 
@@ -179,9 +197,10 @@ function Vitrin({ menu, sepet, adetDegistir, ac }) {
     <>
       <nav ref={sekmeRef} className="kaydirma-gizli sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-cizgi bg-white/95 px-3 backdrop-blur" aria-label="Kategoriler">
         {kategoriler.map((k) => (
-          <a
+          <button
             key={k.id}
-            href={`#k-${k.id}`}
+            type="button"
+            onClick={() => kategoriyeGit(k.id)}
             data-sekme={k.id}
             aria-current={aktif === k.id ? 'true' : undefined}
             className={`relative flex h-14 shrink-0 items-center px-3 text-[17px] whitespace-nowrap transition-colors duration-150 ${
@@ -190,12 +209,20 @@ function Vitrin({ menu, sepet, adetDegistir, ac }) {
           >
             {k.name}
             <span className={`absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-fistik transition-opacity duration-150 ${aktif === k.id ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
-          </a>
+          </button>
         ))}
       </nav>
 
-      {kategoriler.map((k) => (
-        <section key={k.id} id={`k-${k.id}`} data-kategori data-id={k.id} className="px-4 pt-8" aria-labelledby={`b-${k.id}`}>
+      {kategoriler.map((k, i) => (
+        <section
+          key={k.id}
+          id={`k-${k.id}`}
+          data-kategori
+          data-id={k.id}
+          className="px-4 pt-8"
+          style={i === kategoriler.length - 1 ? { minHeight: 'calc(100dvh - 3.5rem)' } : undefined}
+          aria-labelledby={`b-${k.id}`}
+        >
           <h2 id={`b-${k.id}`} className="mb-4 px-1 text-2xl font-bold tracking-[-0.02em]">{k.name}</h2>
           <ul className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3">
             {k.urunler.map((u) => (
