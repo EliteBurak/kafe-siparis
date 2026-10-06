@@ -1,0 +1,42 @@
+# qr-menu klasöründe değişiklik olunca müşteri menüsünü GitHub Pages'e yayınlar.
+name: QR menüyü yayınla
+
+on:
+  push:
+    branches: [main]
+    paths: ['qr-menu/**', '.github/workflows/qr-menu.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  yayinla:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: qr-menu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qr-menu/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: qr-menu/dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

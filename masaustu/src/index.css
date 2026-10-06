@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+
+/*
+  Tasarım sistemi (ui-ux-pro-max: Restaurant/Food Service paleti, ısı tonları)
+  - Ana renk: sıcak turuncu (iştah açıcı), beyaz yazıyla 5.2:1 kontrast
+  - Metin: stone-900, ikincil metin en az stone-600 (4.5:1 üstü)
+  - Boşluklar 8px ızgarası, geçişler 150-200ms
+*/
+@theme {
+  --font-sans: 'Karla', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+  font-size: 15px;
+}
+
+button,
+[role='button'],
+select,
+input[type='checkbox'] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Klavyeyle gezinirken görünür odak halkası */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pulse-in {
+  0% { box-shadow: 0 0 0 0 rgb(234 88 12 / 0.55); }
+  100% { box-shadow: 0 0 0 14px rgb(234 88 12 / 0); }
+}
+.yeni-siparis {
+  animation: pulse-in 1.2s ease-out 3;
+}
+
+/* Yazdırma: sadece body'ye eklenen .yazdir-sayfa basılır (çok sayfaya taşabilir) */
+.yazdir-sayfa {
+  display: none;
+}
+@media print {
+  @page { margin: 12mm; }
+  body > *:not(.yazdir-sayfa) { display: none !important; }
+  .yazdir-sayfa { display: block; }
+}

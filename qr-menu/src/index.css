@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+/*
+  ui-ux-pro-max tasarım sistemi – Restaurant/Food Service:
+  sıcak tonlar, Playfair Display SC başlık + Karla gövde, 16px+ gövde yazısı, 44px+ dokunma alanları
+*/
+@theme {
+  --font-sans: 'Karla', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Playfair Display SC', Georgia, serif;
+
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+  --color-kahve: #431407;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-padding-top: 7.5rem; /* yapışkan başlığın altında kalmasın */
+}
+
+body {
+  @apply bg-brand-50 text-stone-900 antialiased;
+  font-size: 16px;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-700);
+  outline-offset: 2px;
+}
+
+.kaydirma-gizli {
+  scrollbar-width: none;
+}
+.kaydirma-gizli::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes yukari {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.alt-pencere {
+  animation: yukari 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
