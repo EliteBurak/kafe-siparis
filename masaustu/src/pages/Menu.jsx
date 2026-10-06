@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, BookOpen, Eye, EyeOff } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Plus, Pencil, Trash2, BookOpen, Eye, EyeOff, ImagePlus, ImageOff, Loader2 } from 'lucide-react'
 import { useVeri } from '../hooks/useVeri'
 import { supabase, hataMesaji } from '../lib/supabase'
 import { tl, fiyatOku } from '../lib/format'
+import { fotoYukle, fotoSil } from '../lib/foto'
 import { Alan, Bos, Buton, IkonButon, Modal, Rozet, SayfaBasligi, girdiSinifi, useUyari } from '../components/ui'
 
 export default function Menu() {
@@ -97,8 +98,13 @@ export default function Menu() {
                   {liste.map((u) => (
                     <tr key={u.id} className={u.active ? '' : 'text-stone-500'}>
                       <td className="py-3">
-                        <p className="font-semibold">{u.name}</p>
-                        {u.description && <p className="text-sm text-stone-600">{u.description}</p>}
+                        <div className="flex items-center gap-3">
+                          <Kucukresim u={u} />
+                          <div>
+                            <p className="font-semibold">{u.name}</p>
+                            {u.description && <p className="text-sm text-stone-600">{u.description}</p>}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 text-right font-bold">{tl(u.price)}</td>
                       <td className="py-3 text-center">
@@ -193,6 +199,8 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
       : await supabase.from('products').insert(veri)
     setBekliyor(false)
     if (error) return goster(hataMesaji(error), 'hata')
+    // Fotoğraf değiştiyse eskisini depodan sil
+    if (kayit.image_url && kayit.image_url !== veri.image_url) fotoSil(kayit.image_url)
     goster('Ürün kaydedildi')
     kaydedildi()
     kapat()
@@ -206,7 +214,7 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
           <Alan etiket="Ürün adı">{(id) => <input id={id} required maxLength={80} value={d.name} onChange={(e) => set({ name: e.target.value })} className={girdiSinifi} />}</Alan>
         </div>
         <div className="col-span-2">
-          <Alan etiket="Açıklama" ipucu="İsteğe bağlı, menüde ürün adının altında görünür.">{(id) => <input id={id} maxLength={160} value={d.description} onChange={(e) => set({ description: e.target.value })} className={girdiSinifi} />}</Alan>
+          <Alan etiket="Açıklama" ipucu="İsteğe bağlı. Müşteri ürüne dokununca görür.">{(id) => <input id={id} maxLength={160} value={d.description} onChange={(e) => set({ description: e.target.value })} className={girdiSinifi} />}</Alan>
         </div>
         <Alan etiket="Fiyat (₺)" hata={hata}>{(id) => <input id={id} required inputMode="decimal" value={d.price} onChange={(e) => set({ price: e.target.value })} className={girdiSinifi} />}</Alan>
         <Alan etiket="Kategori">
@@ -217,7 +225,7 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
           )}
         </Alan>
         <div className="col-span-2">
-          <Alan etiket="Fotoğraf adresi (URL)" ipucu="İsteğe bağlı. https:// ile başlayan bir resim bağlantısı.">{(id) => <input id={id} type="url" value={d.image_url} onChange={(e) => set({ image_url: e.target.value })} className={girdiSinifi} />}</Alan>
+          <FotoSecici adres={d.image_url} ad={d.name} degisti={(image_url) => set({ image_url })} />
         </div>
         <Alan etiket="Sıra">{(id) => <input id={id} type="number" value={d.sort_order} onChange={(e) => set({ sort_order: e.target.value })} className={girdiSinifi} />}</Alan>
         <label className="flex items-center gap-3 self-end pb-2.5 font-medium">
@@ -226,5 +234,64 @@ function UrunFormu({ kayit, kapat, kaydedildi, kategoriler }) {
         </label>
       </form>
     </Modal>
+  )
+}
+
+function Kucukresim({ u }) {
+  return u.image_url ? (
+    <img src={u.image_url} alt="" width="48" height="48" loading="lazy" className="size-12 shrink-0 rounded-lg bg-stone-100 object-cover" />
+  ) : (
+    <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-400" title="Fotoğraf yok">
+      <ImageOff className="size-5" aria-hidden />
+    </div>
+  )
+}
+
+function FotoSecici({ adres, ad, degisti }) {
+  const { goster } = useUyari()
+  const girdi = useRef(null)
+  const [yukleniyor, setYukleniyor] = useState(false)
+
+  async function sec(e) {
+    const dosya = e.target.files?.[0]
+    e.target.value = ''
+    if (!dosya) return
+    setYukleniyor(true)
+    try {
+      degisti(await fotoYukle(dosya))
+    } catch (err) {
+      goster(hataMesaji(err), 'hata')
+    }
+    setYukleniyor(false)
+  }
+
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-semibold text-stone-800">Fotoğraf</p>
+      <div className="flex items-center gap-4">
+        <div className="relative size-28 shrink-0 overflow-hidden rounded-xl bg-stone-100">
+          {adres ? (
+            <img src={adres} alt={ad || 'Ürün fotoğrafı'} className="size-full object-cover" />
+          ) : (
+            <div className="flex size-full items-center justify-center text-stone-400"><ImageOff className="size-7" aria-hidden /></div>
+          )}
+          {yukleniyor && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+              <Loader2 className="size-6 animate-spin text-brand-700" aria-label="Yükleniyor" />
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-start gap-2">
+          <input ref={girdi} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={sec} />
+          <Buton type="button" tur="ikincil" boyut="kucuk" ikon={ImagePlus} disabled={yukleniyor} onClick={() => girdi.current.click()}>
+            {adres ? 'Fotoğrafı değiştir' : 'Fotoğraf yükle'}
+          </Buton>
+          {adres && (
+            <Buton type="button" tur="hayalet" boyut="kucuk" ikon={Trash2} disabled={yukleniyor} onClick={() => degisti('')}>Kaldır</Buton>
+          )}
+          <p className="text-sm text-stone-600">Kare olarak kırpılır. En iyi sonuç için ürünü ortalayarak çek.</p>
+        </div>
+      </div>
+    </div>
   )
 }

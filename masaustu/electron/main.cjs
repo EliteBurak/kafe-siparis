@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, session } = require('electron')
 const path = require('node:path')
 
 // Yeni sipariş sesi kullanıcı tıklamadan da çalabilsin
@@ -46,5 +46,9 @@ app.on('second-instance', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  // Sadece bildirim iznine izin ver; kamera, mikrofon, konum vb. hepsi kapalı
+  session.defaultSession.setPermissionRequestHandler((_wc, izin, cevap) => cevap(izin === 'notifications'))
+  createWindow()
+})
 app.on('window-all-closed', () => app.quit())

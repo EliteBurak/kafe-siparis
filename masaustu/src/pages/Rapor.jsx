@@ -74,7 +74,7 @@ export default function Rapor() {
 
       {/* Sabit yükseklik: veri gelirken sayfa zıplamasın */}
       <div className="grid grid-cols-4 gap-4">
-        <Kutu baslik="Toplam ciro" deger={ozet && tl(ozet.ciro)} alt={ozet && `${tl(ozet.tahsil)} tahsil edildi · ${tl(ozet.acik)} açık`} />
+        <Kutu baslik="Toplam ciro" deger={ozet && tl(ozet.ciro)} alt={ozet && `${tl(ozet.tahsil)} tahsil edildi, ${tl(ozet.acik)} açık hesapta`} />
         <Kutu baslik="Sipariş sayısı" deger={ozet?.adet} alt={ozet && (ozet.iptal ? `${ozet.iptal} iptal` : 'İptal yok')} />
         <Kutu baslik="Ortalama sipariş" deger={ozet && tl(ozet.ortalama)} />
         <Kutu baslik="En çok satan" deger={ozet && (ozet.urunler[0]?.ad ?? '–')} alt={ozet?.urunler[0] && `${ozet.urunler[0].adet} adet`} />

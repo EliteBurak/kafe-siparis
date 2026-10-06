@@ -85,7 +85,7 @@ const SiparisKarti = memo(function SiparisKarti({ o, simdi, yeni, ilerlet, iptal
         <div>
           <p className="text-lg font-bold leading-tight">{o.table_name || 'Masa yok'}</p>
           <p className="text-sm text-stone-600">
-            #{o.order_no} · {saatYaz(o.created_at)}
+            Sipariş {o.order_no}, saat {saatYaz(o.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-1.5">

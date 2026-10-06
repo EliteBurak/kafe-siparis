@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Minus, ShoppingBag, X, Loader2, CheckCircle2, ChefHat, Clock, Bell, AlertCircle, MapPin, RotateCw } from 'lucide-react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Minus, ShoppingBag, X, Loader2, CheckCircle2, ChefHat, Clock, BellRing, AlertCircle, RotateCw } from 'lucide-react'
 import { masaGetir, menuGetir, siparisVer, siparisDurumu } from './lib/api'
 
-const para = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })
+const para = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 0, maximumFractionDigits: 2 })
 const tl = (n) => para.format(Number(n) || 0)
 
 const DURUM = {
-  yeni: { ad: 'Alındı', ikon: Clock, renk: 'bg-blue-50 text-blue-800' },
+  yeni: { ad: 'Alındı', ikon: Clock, renk: 'bg-sky-50 text-sky-900' },
   hazirlaniyor: { ad: 'Hazırlanıyor', ikon: ChefHat, renk: 'bg-amber-50 text-amber-900' },
-  hazir: { ad: 'Hazır, geliyor', ikon: Bell, renk: 'bg-green-50 text-green-800' },
+  hazir: { ad: 'Hazır, geliyor', ikon: BellRing, renk: 'bg-fistik-acik text-fistik-koyu' },
   teslim: { ad: 'Teslim edildi', ikon: CheckCircle2, renk: 'bg-stone-100 text-stone-700' },
   iptal: { ad: 'İptal edildi', ikon: X, renk: 'bg-red-50 text-red-800' },
 }
@@ -37,6 +37,7 @@ export default function App() {
   const [menu, setMenu] = useState(null)
   const [sepet, setSepet] = useState({}) // urunId -> adet
   const [sepetAcik, setSepetAcik] = useState(false)
+  const [detay, setDetay] = useState(null) // açık ürün
   const [siparislerim, setSiparislerim] = useState(() => siparisleriOku(kod))
 
   const yukle = useCallback(async () => {
@@ -47,7 +48,7 @@ export default function App() {
       if (!m) return setDurum('gecersiz')
       setMasa(m)
       setMenu(mn)
-      document.title = mn.ayar.cafe_name ? `${mn.ayar.cafe_name} – Menü` : 'Menü'
+      document.title = mn.ayar.cafe_name || 'Menü'
       setDurum('hazir')
     } catch (e) {
       setHata(e.message)
@@ -77,6 +78,7 @@ export default function App() {
   }, [])
 
   const sepetiKapat = useCallback(() => setSepetAcik(false), [])
+  const detayiKapat = useCallback(() => setDetay(null), [])
 
   function siparisEklendi(s) {
     const l = [{ ...s, zaman: Date.now() }, ...siparislerim]
@@ -89,63 +91,58 @@ export default function App() {
 
   if (durum === 'yukleniyor') return <Iskelet />
   if (durum === 'gecersiz')
-    return <TamEkran ikon={AlertCircle} baslik="QR kod geçersiz" metin="Lütfen masadaki QR kodu tekrar okut ya da garsondan yardım iste." />
+    return <TamEkran baslik="Bu QR kod çalışmıyor" metin="Masadaki QR kodu tekrar okutun. Yine açılmazsa garsondan yardım isteyin." />
   if (durum === 'hata')
     return (
-      <TamEkran ikon={AlertCircle} baslik="Menü yüklenemedi" metin={hata}>
-        <button onClick={yukle} className="mt-4 inline-flex h-12 items-center gap-2 rounded-full bg-brand-700 px-6 font-bold text-white hover:bg-brand-800">
+      <TamEkran baslik="Menü açılamadı" metin={hata}>
+        <button onClick={yukle} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-fistik px-6 font-semibold text-white hover:bg-fistik-koyu">
           <RotateCw className="size-5" aria-hidden /> Tekrar dene
         </button>
       </TamEkran>
     )
 
   return (
-    <div className="mx-auto min-h-dvh max-w-xl pb-32">
-      <header className="px-5 pt-8 pb-4">
-        <p className="text-sm font-semibold tracking-wide text-brand-800 uppercase">Hoş geldiniz</p>
-        <h1 className="font-display text-4xl leading-tight text-kahve">{menu.ayar.cafe_name || 'Menü'}</h1>
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-sm font-semibold text-stone-800 ring-1 ring-brand-200">
-          <MapPin className="size-4 text-brand-700" aria-hidden /> {masa.name}
+    <div className="mx-auto min-h-dvh max-w-2xl pb-32">
+      <header className="px-5 pt-10 pb-5">
+        <h1 className="text-[2.75rem] leading-[0.95] font-extrabold tracking-[-0.035em] text-balance" style={{ fontVariationSettings: "'opsz' 96" }}>
+          {menu.ayar.cafe_name || 'Menü'}
+        </h1>
+        <p className="mt-3 text-lg text-gri">
+          <span className="font-semibold text-murekkep">{masa.name}</span> için sipariş
         </p>
       </header>
 
       <Siparislerim liste={siparislerim} />
 
-      <MenuListesi menu={menu} sepet={sepet} adetDegistir={adetDegistir} />
+      <Vitrin menu={menu} sepet={sepet} adetDegistir={adetDegistir} ac={setDetay} />
 
-      {sepetAdet > 0 && !sepetAcik && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {sepetAdet > 0 && !sepetAcik && !detay && (
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button
             onClick={() => setSepetAcik(true)}
-            className="flex h-16 w-full items-center gap-3 rounded-2xl bg-kahve px-5 text-white shadow-xl transition-colors duration-150 hover:bg-brand-900"
+            className="flex h-16 w-full items-center gap-3 rounded-full bg-fistik pr-6 pl-2 text-white shadow-[0_8px_24px_rgb(20_33_61/0.25)] transition-colors duration-150 hover:bg-fistik-koyu"
           >
-            <span className="relative">
-              <ShoppingBag className="size-6" aria-hidden />
-              <span className="absolute -top-2 -right-2.5 flex size-5 items-center justify-center rounded-full bg-brand-600 text-xs font-bold">{sepetAdet}</span>
+            <span className="flex size-12 items-center justify-center rounded-full bg-white text-lg font-bold text-fistik" aria-label={`${sepetAdet} ürün`}>
+              {sepetAdet}
             </span>
-            <span className="flex-1 text-left text-lg font-bold">Sepeti gör</span>
-            <span className="text-lg font-bold">{tl(sepetToplam)}</span>
+            <span className="flex-1 text-left text-lg font-semibold">Sepeti gör</span>
+            <span className="text-lg font-bold tabular-nums">{tl(sepetToplam)}</span>
           </button>
         </div>
       )}
 
+      {detay && <UrunDetay u={detay} adet={sepet[detay.id] || 0} adetDegistir={adetDegistir} kapat={detayiKapat} />}
+
       {sepetAcik && (
-        <Sepet
-          kod={kod}
-          liste={sepetListesi}
-          toplam={sepetToplam}
-          adetDegistir={adetDegistir}
-          kapat={sepetiKapat}
-          tamamlandi={siparisEklendi}
-        />
+        <Sepet kod={kod} liste={sepetListesi} toplam={sepetToplam} adetDegistir={adetDegistir} kapat={sepetiKapat} tamamlandi={siparisEklendi} />
       )}
     </div>
   )
 }
 
-/* ---------------- Menü ---------------- */
+/* ---------------- Vitrin ---------------- */
 
-function MenuListesi({ menu, sepet, adetDegistir }) {
+function Vitrin({ menu, sepet, adetDegistir, ac }) {
   const kategoriler = useMemo(
     () => menu.kategoriler.map((k) => ({ ...k, urunler: menu.urunler.filter((u) => u.category_id === k.id) })).filter((k) => k.urunler.length),
     [menu]
@@ -153,15 +150,14 @@ function MenuListesi({ menu, sepet, adetDegistir }) {
   const [aktif, setAktif] = useState(kategoriler[0]?.id)
   const sekmeRef = useRef(null)
 
-  // Kaydırdıkça hangi kategoride olduğumuzu sekmelerde göster:
-  // üst kenarı yapışkan sekmelerin altına geçmiş son bölüm aktiftir
+  // Kaydırdıkça aktif kategoriyi bul: üst kenarı sekmelerin altına geçmiş son bölüm
   useEffect(() => {
     let kare = 0
     const hesapla = () => {
       kare = 0
       const bolumler = document.querySelectorAll('[data-kategori]')
       let secilen = bolumler[0]
-      for (const el of bolumler) if (el.getBoundingClientRect().top <= 140) secilen = el
+      for (const el of bolumler) if (el.getBoundingClientRect().top <= 90) secilen = el
       if (secilen) setAktif(Number(secilen.dataset.id))
     }
     const dinle = () => { if (!kare) kare = requestAnimationFrame(hesapla) }
@@ -177,32 +173,33 @@ function MenuListesi({ menu, sepet, adetDegistir }) {
     sekmeRef.current?.querySelector(`[data-sekme="${aktif}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [aktif])
 
-  if (!kategoriler.length) return <p className="px-5 py-10 text-center text-stone-700">Menü şu an hazırlanıyor.</p>
+  if (!kategoriler.length) return <p className="px-5 py-16 text-center text-gri">Menü henüz hazır değil. Siparişinizi garsona verebilirsiniz.</p>
 
   return (
     <>
-      <nav ref={sekmeRef} className="kaydirma-gizli sticky top-0 z-20 flex gap-2 overflow-x-auto bg-brand-50/95 px-5 py-3 backdrop-blur" aria-label="Kategoriler">
+      <nav ref={sekmeRef} className="kaydirma-gizli sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-cizgi bg-white/95 px-3 backdrop-blur" aria-label="Kategoriler">
         {kategoriler.map((k) => (
           <a
             key={k.id}
             href={`#k-${k.id}`}
             data-sekme={k.id}
             aria-current={aktif === k.id ? 'true' : undefined}
-            className={`flex h-11 shrink-0 items-center rounded-full px-5 font-semibold whitespace-nowrap transition-colors duration-150 ${
-              aktif === k.id ? 'bg-kahve text-white' : 'bg-white text-stone-800 ring-1 ring-brand-200 hover:bg-brand-100'
+            className={`relative flex h-14 shrink-0 items-center px-3 text-[17px] whitespace-nowrap transition-colors duration-150 ${
+              aktif === k.id ? 'font-bold text-murekkep' : 'font-medium text-gri hover:text-murekkep'
             }`}
           >
             {k.name}
+            <span className={`absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-fistik transition-opacity duration-150 ${aktif === k.id ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
           </a>
         ))}
       </nav>
 
       {kategoriler.map((k) => (
-        <section key={k.id} id={`k-${k.id}`} data-kategori data-id={k.id} className="px-5 pt-6" aria-labelledby={`b-${k.id}`}>
-          <h2 id={`b-${k.id}`} className="mb-3 font-display text-2xl text-kahve">{k.name}</h2>
-          <ul className="flex flex-col gap-3">
+        <section key={k.id} id={`k-${k.id}`} data-kategori data-id={k.id} className="px-4 pt-8" aria-labelledby={`b-${k.id}`}>
+          <h2 id={`b-${k.id}`} className="mb-4 px-1 text-2xl font-bold tracking-[-0.02em]">{k.name}</h2>
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3">
             {k.urunler.map((u) => (
-              <UrunKarti key={u.id} u={u} adet={sepet[u.id] || 0} adetDegistir={adetDegistir} />
+              <UrunKarti key={u.id} u={u} adet={sepet[u.id] || 0} adetDegistir={adetDegistir} ac={ac} />
             ))}
           </ul>
         </section>
@@ -211,60 +208,148 @@ function MenuListesi({ menu, sepet, adetDegistir }) {
   )
 }
 
-function UrunKarti({ u, adet, adetDegistir }) {
+function Foto({ u, className = '', buyuk }) {
+  const [hatali, setHatali] = useState(false)
+  if (u.image_url && !hatali) {
+    return (
+      <img
+        src={u.image_url}
+        alt={u.name}
+        loading={buyuk ? 'eager' : 'lazy'}
+        decoding="async"
+        width="600"
+        height="600"
+        onError={() => setHatali(true)}
+        className={`aspect-square w-full bg-fistik-acik object-cover ${className}`}
+      />
+    )
+  }
+  // Fotoğrafı olmayan ürün: açık fıstık zemin üzerinde büyük baş harf
   return (
-    <li className="flex gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <h3 className="text-lg leading-snug font-bold">{u.name}</h3>
-        {u.description && <p className="mt-0.5 text-[15px] leading-relaxed text-stone-600">{u.description}</p>}
-        <p className="mt-auto pt-2 text-lg font-bold text-brand-800">{tl(u.price)}</p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end justify-between gap-3">
-        {u.image_url && (
-          <img src={u.image_url} alt={u.name} loading="lazy" width="96" height="96" className="size-24 rounded-xl bg-brand-100 object-cover" />
-        )}
-        <Sayac adet={adet} ad={u.name} azalt={() => adetDegistir(u.id, -1)} artir={() => adetDegistir(u.id, 1)} />
-      </div>
-    </li>
+    <div className={`flex aspect-square w-full items-center justify-center bg-fistik-acik ${className}`} aria-hidden>
+      <span className={`font-extrabold text-fistik/70 ${buyuk ? 'text-9xl' : 'text-6xl'}`} style={{ fontVariationSettings: "'opsz' 96" }}>
+        {u.name.trim().charAt(0).toLocaleUpperCase('tr-TR')}
+      </span>
+    </div>
   )
 }
 
-function Sayac({ adet, ad, azalt, artir }) {
+const UrunKarti = memo(function UrunKarti({ u, adet, adetDegistir, ac }) {
+  return (
+    <li className="flex flex-col">
+      <div className="relative">
+        <button onClick={() => ac(u)} className="block w-full overflow-hidden rounded-2xl" aria-label={`${u.name} ayrıntıları`}>
+          <Foto u={u} />
+        </button>
+        <div className="absolute right-2 bottom-2">
+          <Sayac adet={adet} ad={u.name} azalt={() => adetDegistir(u.id, -1)} artir={() => adetDegistir(u.id, 1)} kucuk />
+        </div>
+      </div>
+      <button onClick={() => ac(u)} className="mt-2.5 px-1 text-left">
+        <span className="block text-[17px] leading-snug font-semibold">{u.name}</span>
+        <span className="mt-0.5 block text-[17px] font-medium text-gri tabular-nums">{tl(u.price)}</span>
+      </button>
+    </li>
+  )
+})
+
+function Sayac({ adet, ad, azalt, artir, kucuk }) {
   if (!adet)
     return (
-      <button onClick={artir} aria-label={`${ad} sepete ekle`} className="inline-flex h-11 items-center gap-1.5 rounded-full bg-brand-700 px-4 font-bold text-white shadow-sm transition-colors duration-150 hover:bg-brand-800">
-        <Plus className="size-5" aria-hidden /> Ekle
+      <button
+        onClick={artir}
+        aria-label={`${ad} sepete ekle`}
+        className={`flex items-center justify-center rounded-full bg-white text-fistik shadow-[0_2px_8px_rgb(20_33_61/0.18)] transition-colors duration-150 hover:bg-fistik hover:text-white ${kucuk ? 'size-11' : 'h-12 gap-2 px-5 font-semibold'}`}
+      >
+        <Plus className="size-5" strokeWidth={2.5} aria-hidden />
+        {!kucuk && 'Ekle'}
       </button>
     )
   return (
-    <div className="flex h-11 items-center rounded-full bg-brand-100 ring-1 ring-brand-200">
-      <button onClick={azalt} aria-label={`${ad} azalt`} className="flex size-11 items-center justify-center rounded-full text-brand-900 hover:bg-brand-200">
-        <Minus className="size-5" aria-hidden />
+    <div className={`flex items-center rounded-full bg-fistik text-white shadow-[0_2px_8px_rgb(20_33_61/0.18)] ${kucuk ? 'h-11' : 'h-12'}`}>
+      <button onClick={azalt} aria-label={`${ad} azalt`} className="flex size-11 items-center justify-center rounded-full hover:bg-fistik-koyu">
+        <Minus className="size-5" strokeWidth={2.5} aria-hidden />
       </button>
-      <span className="w-7 text-center text-lg font-bold" aria-live="polite">{adet}</span>
-      <button onClick={artir} aria-label={`${ad} artır`} className="flex size-11 items-center justify-center rounded-full text-brand-900 hover:bg-brand-200">
-        <Plus className="size-5" aria-hidden />
+      <span className="min-w-5 text-center text-lg font-bold tabular-nums" aria-live="polite">{adet}</span>
+      <button onClick={artir} aria-label={`${ad} artır`} className="flex size-11 items-center justify-center rounded-full hover:bg-fistik-koyu">
+        <Plus className="size-5" strokeWidth={2.5} aria-hidden />
       </button>
     </div>
   )
 }
 
-/* ---------------- Sepet ---------------- */
+/* ---------------- Alt pencere (detay ve sepet ortak) ---------------- */
 
-function Sepet({ kod, liste, toplam, adetDegistir, kapat, tamamlandi }) {
-  const [not, setNot] = useState('')
-  const [gonderiliyor, setGonderiliyor] = useState(false)
-  const [hata, setHata] = useState('')
-
+function AltPencere({ etiket, kapat, children }) {
+  const kapatRef = useRef(kapat)
+  kapatRef.current = kapat
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && kapat()
+    const onKey = (e) => e.key === 'Escape' && kapatRef.current()
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = ''
       window.removeEventListener('keydown', onKey)
     }
-  }, [kapat])
+  }, [])
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-murekkep/50" onClick={(e) => e.target === e.currentTarget && kapat()}>
+      <div role="dialog" aria-modal="true" aria-label={etiket} className="alt-pencere relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[28px] bg-white">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function KapatButonu({ kapat, ustte }) {
+  return (
+    <button
+      onClick={kapat}
+      aria-label="Kapat"
+      className={`flex size-11 items-center justify-center rounded-full ${ustte ? 'absolute top-3 right-3 z-10 bg-white/90 shadow-sm backdrop-blur' : 'hover:bg-stone-100'}`}
+    >
+      <X className="size-6" aria-hidden />
+    </button>
+  )
+}
+
+function UrunDetay({ u, adet, adetDegistir, kapat }) {
+  return (
+    <AltPencere etiket={u.name} kapat={kapat}>
+      <KapatButonu kapat={kapat} ustte />
+      <div className="overflow-y-auto">
+        <Foto u={u} buyuk className="max-h-[55dvh]" />
+        <div className="px-6 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <h2 className="text-3xl leading-tight font-bold tracking-[-0.025em]">{u.name}</h2>
+          <p className="mt-1 text-xl font-medium text-gri tabular-nums">{tl(u.price)}</p>
+          {u.description && <p className="mt-4 max-w-prose text-[17px] leading-relaxed text-gri">{u.description}</p>}
+          <div className="mt-6 flex items-center gap-3">
+            {adet > 0 ? (
+              <>
+                <Sayac adet={adet} ad={u.name} azalt={() => adetDegistir(u.id, -1)} artir={() => adetDegistir(u.id, 1)} />
+                <button onClick={kapat} className="h-12 flex-1 rounded-full border-2 border-fistik font-semibold text-fistik hover:bg-fistik-acik">
+                  Menüye dön
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { adetDegistir(u.id, 1); kapat() }}
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-fistik text-lg font-semibold text-white hover:bg-fistik-koyu"
+              >
+                <Plus className="size-5" strokeWidth={2.5} aria-hidden /> Sepete ekle
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </AltPencere>
+  )
+}
+
+function Sepet({ kod, liste, toplam, adetDegistir, kapat, tamamlandi }) {
+  const [not, setNot] = useState('')
+  const [gonderiliyor, setGonderiliyor] = useState(false)
+  const [hata, setHata] = useState('')
 
   useEffect(() => {
     if (!liste.length) kapat()
@@ -283,55 +368,59 @@ function Sepet({ kod, liste, toplam, adetDegistir, kapat, tamamlandi }) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-stone-900/50" onClick={(e) => e.target === e.currentTarget && kapat()}>
-      <div role="dialog" aria-modal="true" aria-label="Sepetim" className="alt-pencere flex max-h-[90dvh] w-full max-w-xl flex-col rounded-t-3xl bg-white">
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <h2 className="font-display text-2xl text-kahve">Sepetim</h2>
-          <button onClick={kapat} aria-label="Kapat" className="flex size-11 items-center justify-center rounded-full text-stone-700 hover:bg-stone-100">
-            <X className="size-6" aria-hidden />
-          </button>
-        </div>
-
-        <ul className="flex-1 divide-y divide-stone-100 overflow-y-auto px-5">
-          {liste.map(({ urun, adet }) => (
-            <li key={urun.id} className="flex items-center gap-3 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-bold">{urun.name}</p>
-                <p className="text-[15px] text-stone-600">{tl(urun.price * adet)}</p>
-              </div>
-              <Sayac adet={adet} ad={urun.name} azalt={() => adetDegistir(urun.id, -1)} artir={() => adetDegistir(urun.id, 1)} />
-            </li>
-          ))}
-        </ul>
-
-        <div className="border-t border-stone-100 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <label htmlFor="not" className="text-[15px] font-semibold">Not ekle <span className="font-normal text-stone-600">(isteğe bağlı)</span></label>
-          <textarea
-            id="not"
-            rows={2}
-            maxLength={300}
-            value={not}
-            onChange={(e) => setNot(e.target.value)}
-            placeholder="Ör. kahve şekersiz olsun"
-            className="mt-1.5 w-full resize-none rounded-xl border border-stone-300 p-3 text-base placeholder:text-stone-500 focus:border-brand-700 focus:ring-2 focus:ring-brand-200 focus:outline-none"
-          />
-          {hata && (
-            <p role="alert" className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 p-3 text-[15px] font-medium text-red-800">
-              <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden /> {hata}
-            </p>
-          )}
-          <button
-            onClick={gonder}
-            disabled={gonderiliyor}
-            className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand-700 text-lg font-bold text-white shadow-lg transition-colors duration-150 hover:bg-brand-800 disabled:opacity-60"
-          >
-            {gonderiliyor ? <Loader2 className="size-5 animate-spin" aria-hidden /> : null}
-            {gonderiliyor ? 'Gönderiliyor…' : `Siparişi ver · ${tl(toplam)}`}
-          </button>
-          <p className="mt-2 text-center text-sm text-stone-600">Ödemeyi kasada ya da garsona yapabilirsiniz.</p>
-        </div>
+    <AltPencere etiket="Sepetim" kapat={kapat}>
+      <div className="flex items-center justify-between px-6 pt-5 pb-2">
+        <h2 className="text-2xl font-bold tracking-[-0.02em]">Sepetim</h2>
+        <KapatButonu kapat={kapat} />
       </div>
-    </div>
+
+      <ul className="flex-1 overflow-y-auto px-6">
+        {liste.map(({ urun, adet }) => (
+          <li key={urun.id} className="flex items-center gap-3 border-b border-cizgi py-3 last:border-0">
+            <div className="w-14 shrink-0 overflow-hidden rounded-xl">
+              <Foto u={urun} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold">{urun.name}</p>
+              <p className="text-gri tabular-nums">{tl(urun.price * adet)}</p>
+            </div>
+            <Sayac adet={adet} ad={urun.name} azalt={() => adetDegistir(urun.id, -1)} artir={() => adetDegistir(urun.id, 1)} kucuk />
+          </li>
+        ))}
+      </ul>
+
+      <div className="border-t border-cizgi px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <label htmlFor="not" className="font-semibold">
+          Not <span className="font-normal text-gri">(isteğe bağlı)</span>
+        </label>
+        <textarea
+          id="not"
+          rows={2}
+          maxLength={300}
+          value={not}
+          onChange={(e) => setNot(e.target.value)}
+          placeholder="Örneğin: kahve şekersiz olsun"
+          className="mt-1.5 w-full resize-none rounded-2xl border border-cizgi bg-stone-50 p-3 text-base placeholder:text-gri/80 focus:border-fistik focus:bg-white focus:ring-2 focus:ring-fistik-acik focus:outline-none"
+        />
+        {hata && (
+          <p role="alert" className="mt-2 flex items-start gap-2 rounded-2xl bg-red-50 p-3 font-medium text-nar">
+            <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden /> {hata}
+          </p>
+        )}
+        <button
+          onClick={gonder}
+          disabled={gonderiliyor}
+          className="mt-3 flex h-14 w-full items-center justify-between rounded-full bg-fistik px-6 text-lg font-semibold text-white transition-colors duration-150 hover:bg-fistik-koyu disabled:opacity-60"
+        >
+          <span className="flex items-center gap-2">
+            {gonderiliyor && <Loader2 className="size-5 animate-spin" aria-hidden />}
+            {gonderiliyor ? 'Gönderiliyor' : 'Siparişi gönder'}
+          </span>
+          <span className="font-bold tabular-nums">{tl(toplam)}</span>
+        </button>
+        <p className="mt-2.5 text-center text-sm text-gri">Ödemeyi kasada ya da garsona yapabilirsiniz.</p>
+      </div>
+    </AltPencere>
   )
 }
 
@@ -360,28 +449,28 @@ function Siparislerim({ liste }) {
   }, [liste])
 
   if (!liste.length) return null
-  const enYeni = liste[0]
-  const yeniGeldi = Date.now() - enYeni.zaman < 15000
+  const yeniGeldi = Date.now() - liste[0].zaman < 15000
 
   return (
-    <section className="mx-5 mb-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-brand-100" aria-label="Siparişlerim" aria-live="polite">
-      {yeniGeldi && (
-        <p className="mb-3 flex items-center gap-2 rounded-xl bg-green-50 p-3 font-semibold text-green-800">
-          <CheckCircle2 className="size-5 shrink-0" aria-hidden /> Siparişiniz alındı, teşekkürler!
+    <section className="mx-4 mb-6 rounded-3xl bg-fistik-acik p-5" aria-label="Siparişlerim" aria-live="polite">
+      {yeniGeldi ? (
+        <p className="flex items-center gap-2 text-lg font-bold text-fistik-koyu">
+          <CheckCircle2 className="size-6 shrink-0" aria-hidden /> Siparişiniz mutfağa iletildi
         </p>
+      ) : (
+        <h2 className="text-lg font-bold">Siparişleriniz</h2>
       )}
-      <h2 className="mb-2 font-bold">Siparişlerim</h2>
-      <ul className="flex flex-col gap-2">
+      <ul className="mt-3 flex flex-col gap-2">
         {liste.map((s) => {
           const d = DURUM[durumlar[s.id]?.status] ?? DURUM.yeni
           const Ikon = d.ikon
           return (
-            <li key={s.id} className="flex items-center justify-between gap-3">
-              <span className="font-medium text-stone-700">
-                Sipariş #{s.no}
-                {durumlar[s.id] && <span className="text-stone-600"> · {tl(durumlar[s.id].total)}</span>}
-              </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${d.renk}`}>
+            <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3">
+              <div>
+                <p className="font-semibold">Sipariş {s.no}</p>
+                {durumlar[s.id] && <p className="text-sm text-gri tabular-nums">{tl(durumlar[s.id].total)}</p>}
+              </div>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${d.renk}`}>
                 <Ikon className="size-4" aria-hidden /> {d.ad}
               </span>
             </li>
@@ -394,26 +483,30 @@ function Siparislerim({ liste }) {
 
 /* ---------------- Yardımcı ekranlar ---------------- */
 
-function TamEkran({ ikon: Ikon, baslik, metin, children }) {
+function TamEkran({ baslik, metin, children }) {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-8 text-center">
-      <Ikon className="size-12 text-brand-700" aria-hidden />
-      <h1 className="mt-4 font-display text-3xl text-kahve">{baslik}</h1>
-      <p className="mt-2 max-w-sm text-stone-700">{metin}</p>
-      {children}
+    <div className="flex min-h-dvh flex-col justify-center px-8">
+      <AlertCircle className="size-10 text-nar" aria-hidden />
+      <h1 className="mt-4 text-4xl leading-tight font-extrabold tracking-[-0.03em]">{baslik}</h1>
+      <p className="mt-3 max-w-sm text-lg text-gri">{metin}</p>
+      {children && <div>{children}</div>}
     </div>
   )
 }
 
 function Iskelet() {
   return (
-    <div className="mx-auto max-w-xl animate-pulse px-5 pt-8" aria-label="Menü yükleniyor">
-      <div className="h-4 w-28 rounded bg-brand-200" />
-      <div className="mt-3 h-10 w-56 rounded bg-brand-200" />
-      <div className="mt-8 flex gap-2">
-        {[1, 2, 3].map((i) => <div key={i} className="h-11 w-28 rounded-full bg-white" />)}
+    <div className="mx-auto max-w-2xl animate-pulse px-5 pt-10" aria-label="Menü yükleniyor">
+      <div className="h-11 w-60 rounded-xl bg-stone-100" />
+      <div className="mt-4 h-5 w-32 rounded bg-stone-100" />
+      <div className="mt-10 grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i}>
+            <div className="aspect-square rounded-2xl bg-stone-100" />
+            <div className="mt-3 h-4 w-3/4 rounded bg-stone-100" />
+          </div>
+        ))}
       </div>
-      {[1, 2, 3, 4].map((i) => <div key={i} className="mt-4 h-28 rounded-2xl bg-white" />)}
     </div>
   )
 }

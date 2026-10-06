@@ -42,5 +42,16 @@ Yayın adresi `https://KULLANICIADI.github.io/DEPOADI/` olur; bu adresi masaüst
 
 - Koddaki Supabase anahtarı (`sb_publishable_...`) herkese açık olacak şekilde tasarlanmıştır.
 - **Secret / service_role anahtarını asla koda yazma.**
-- Müşteriler sadece menüyü okuyabilir ve sipariş verebilir; fiyatı veritabanı hesaplar, başkasının siparişini göremezler.
-- Menü, masa ve sipariş yönetimi yalnızca giriş yapmış personele açıktır.
+- Müşteriler sadece menüyü okuyabilir ve sipariş verebilir. Fiyatı veritabanı hesaplar, başkasının siparişini göremezler.
+- Bir masadan 10 dakikada en fazla 8 sipariş verilebilir. Bir siparişte en fazla 100 ürün olabilir.
+- Yönetim (menü, masa, sipariş, fotoğraf) sadece `staff` listesindeki kullanıcılara açıktır. Giriş yapmış olmak tek başına yetmez.
+- Supabase'de **Authentication → Sign In / Providers → Allow new users to sign up** kapalı olmalı.
+
+### Yeni personel eklemek
+
+1. Supabase'de **Authentication → Users → Add user** ile kullanıcıyı oluştur.
+2. **SQL Editor**'da şunu çalıştır (e-postayı değiştir):
+   ```sql
+   insert into public.staff (user_id)
+   select id from auth.users where email = 'personel@ornek.com';
+   ```

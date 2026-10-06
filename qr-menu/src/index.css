@@ -1,31 +1,30 @@
 @import 'tailwindcss';
 
 /*
-  ui-ux-pro-max tasarım sistemi – Restaurant/Food Service:
-  sıcak tonlar, Playfair Display SC başlık + Karla gövde, 16px+ gövde yazısı, 44px+ dokunma alanları
+  QR menü – "Fotoğraflı vitrin" (docs/plans/2026-10-06-qr-menu-vitrin-design.md)
+  Beyaz zemin, lacivert yazı, tek vurgu: koyu fıstık. Tek yazı ailesi: Bricolage Grotesque.
 */
 @theme {
-  --font-sans: 'Karla', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Playfair Display SC', Georgia, serif;
+  --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #fff7ed;
-  --color-brand-100: #ffedd5;
-  --color-brand-200: #fed7aa;
-  --color-brand-600: #ea580c;
-  --color-brand-700: #c2410c;
-  --color-brand-800: #9a3412;
-  --color-brand-900: #7c2d12;
-  --color-kahve: #431407;
+  --color-murekkep: #14213d;
+  --color-gri: #55606e;
+  --color-cizgi: #e6e8ec;
+  --color-fistik: #2f5d3a;
+  --color-fistik-koyu: #244a2d;
+  --color-fistik-acik: #e8efe5;
+  --color-nar: #b42318;
 }
 
 html {
   -webkit-tap-highlight-color: transparent;
-  scroll-padding-top: 7.5rem; /* yapışkan başlığın altında kalmasın */
+  scroll-padding-top: 4.5rem; /* yapışkan sekmelerin altında kalmasın */
 }
 
 body {
-  @apply bg-brand-50 text-stone-900 antialiased;
+  @apply bg-white text-murekkep antialiased;
   font-size: 16px;
+  font-variation-settings: 'opsz' 14;
 }
 
 button {
@@ -36,7 +35,7 @@ button:disabled {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand-700);
+  outline: 2px solid var(--color-fistik);
   outline-offset: 2px;
 }
 
@@ -52,7 +51,7 @@ button:disabled {
   to { transform: translateY(0); }
 }
 .alt-pencere {
-  animation: yukari 220ms ease-out;
+  animation: yukari 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

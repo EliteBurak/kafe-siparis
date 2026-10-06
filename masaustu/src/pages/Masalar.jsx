@@ -233,7 +233,7 @@ function HesapPenceresi({ masa, siparisler, kapat, yenileSiparis }) {
       </table>
       <div className="mt-4 flex flex-wrap gap-1.5">
         {siparisler.map((o) => (
-          <Rozet key={o.id} className={DURUMLAR[o.status].renk}>#{o.order_no} · {DURUMLAR[o.status].ad}</Rozet>
+          <Rozet key={o.id} className={DURUMLAR[o.status].renk}>Sipariş {o.order_no}: {DURUMLAR[o.status].ad}</Rozet>
         ))}
       </div>
     </Modal>
