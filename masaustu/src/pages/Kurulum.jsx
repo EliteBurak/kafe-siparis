@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Store, KeyRound, LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Store, KeyRound, LogOut, Lock } from 'lucide-react'
 import { supabase, hataMesaji } from '../lib/supabase'
 import { useRestoran } from '../hooks/useRestoran'
 import { Alan, Buton, girdiSinifi } from '../components/ui'
@@ -13,6 +13,12 @@ export default function Kurulum() {
   const [kod, setKod] = useState('')
   const [hata, setHata] = useState('')
   const [bekliyor, setBekliyor] = useState(false)
+  const [askida, setAskida] = useState([])
+
+  // Personel olduğu restoran ücretsiz sürüme geçtiyse bunu açıkça söyle
+  useEffect(() => {
+    supabase.rpc('askidaki_restoranlarim').then(({ data }) => setAskida(data ?? []))
+  }, [])
 
   async function gonder(e) {
     e.preventDefault()
@@ -36,6 +42,16 @@ export default function Kurulum() {
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-stone-200 sm:p-8">
         <h1 className="text-2xl font-bold">Hoş geldin</h1>
         <p className="mt-1 text-stone-600">{eposta} ile giriş yaptın. Nasıl devam etmek istersin?</p>
+
+        {askida.length > 0 && (
+          <div role="status" className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-amber-950 ring-1 ring-amber-200">
+            <Lock className="mt-0.5 size-5 shrink-0" aria-hidden />
+            <p>
+              <strong>{askida.map((r) => r.name).join(', ')}</strong> ücretsiz sürüme geçtiği için personel girişi şu an kapalı.
+              Restoran sahibi Pro sürüme geçince hesabın otomatik olarak yeniden açılır.
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           {[

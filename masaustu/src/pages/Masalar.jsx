@@ -4,6 +4,7 @@ import { useVeri } from '../hooks/useVeri'
 import { useRestoran } from '../hooks/useRestoran'
 import { supabase, hataMesaji } from '../lib/supabase'
 import { DURUMLAR, tl } from '../lib/format'
+import { YETKI_YOK } from '../hooks/useSiparisler'
 import { Alan, Bos, Buton, IkonButon, Modal, Rozet, SayfaBasligi, girdiSinifi, useUyari } from '../components/ui'
 
 export default function Masalar({ siparisler, yenileSiparis, siparisAl }) {
@@ -175,12 +176,14 @@ function HesapPenceresi({ masa, siparisler, kapat, yenileSiparis }) {
       if (!tamam) return
     }
     setKapatiliyor(true)
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .update({ paid: true, status: 'teslim' })
       .in('id', siparisler.map((o) => o.id))
+      .select('id')
     setKapatiliyor(false)
     if (error) return goster(hataMesaji(error), 'hata')
+    if (!data?.length) return goster(YETKI_YOK, 'hata')
     goster(`${masa.name} hesabı kapatıldı: ${tl(toplam)}`)
     yenileSiparis()
     kapat()

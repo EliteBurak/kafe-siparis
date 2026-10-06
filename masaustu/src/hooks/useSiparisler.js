@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { zilCal, masaustuBildirimi } from '../lib/bildirim'
 
 const SECIM = '*, order_items(*)'
+export const YETKI_YOK = 'Bu işlem için yetkin yok. Restoranın sürümü ya da rolün değişmiş olabilir; sayfayı yenile.'
 const aktifMi = (o) => !o.paid && o.status !== 'iptal'
 
 /**
@@ -91,7 +92,9 @@ export function useSiparisler(rid, kullaniciId) {
         ? l.map((o) => (o.id === id ? { ...o, status } : o)).filter((o) => o.status !== 'iptal')
         : l.map((o) => (o.id === id ? { ...o, status } : o))
     )
-    const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+    let { data, error } = await supabase.from('orders').update({ status }).eq('id', id).select('id')
+    // Veritabanı yetki yüzünden satırı güncellemezse hata vermez, sadece 0 satır döner
+    if (!error && !data?.length) error = { message: YETKI_YOK }
     if (error && eski) {
       setSiparisler((l) => (l.some((o) => o.id === id) ? l.map((o) => (o.id === id ? eski : o)) : [...l, eski]))
     }

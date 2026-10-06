@@ -23,11 +23,22 @@ export function RestoranSaglayici({ oturum, children }) {
       .select('role, display_name, restaurant_id, restaurants(id, name, slug, plan)')
       .eq('user_id', oturum.user.id)
       .order('created_at')
-    setUyelikler(error ? [] : data.filter((u) => u.restaurants))
+    // Ağ hatasında mevcut bilgiyi koru; sadece ilk yüklemede boş liste
+    setUyelikler((onceki) => (error ? (onceki ?? []) : data.filter((u) => u.restaurants)))
   }, [oturum.user.id])
 
   useEffect(() => {
     yenile()
+    // Sahip personeli çıkarırsa veya restoran ücretsiz sürüme geçerse açık ekran da bunu fark etsin
+    const odak = () => document.visibilityState === 'visible' && yenile()
+    document.addEventListener('visibilitychange', odak)
+    window.addEventListener('focus', odak)
+    const t = setInterval(yenile, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', odak)
+      window.removeEventListener('focus', odak)
+      clearInterval(t)
+    }
   }, [yenile])
 
   const restoranSec = useCallback((id) => {

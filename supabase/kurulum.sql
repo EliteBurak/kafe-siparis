@@ -128,9 +128,18 @@ create index if not exists items_order_idx        on public.order_items(order_id
 
 -- ---------- 2. YETKİ YARDIMCILARI ----------
 -- Giriş yapan kullanıcının bu restorandaki rolü (üye değilse null)
+-- Ücretsiz sürümde sadece sahip girebilir: Pro bitince personelin erişimi kapanır (veriler silinmez)
 create or replace function public.rolum(r uuid) returns text
 language sql stable security definer set search_path = public as $$
-  select role from public.members where restaurant_id = r and user_id = auth.uid();
+  select m.role from public.members m join public.restaurants x on x.id = m.restaurant_id
+   where m.restaurant_id = r and m.user_id = auth.uid() and (m.role = 'sahip' or x.plan = 'pro');
+$$;
+
+-- Personelin, restoran ücretsiz sürüme geçtiği için erişemediği restoranlar (ekranda bilgi vermek için)
+create or replace function public.askidaki_restoranlarim()
+returns table (name text) language sql stable security definer set search_path = public as $$
+  select x.name from public.members m join public.restaurants x on x.id = m.restaurant_id
+   where m.user_id = auth.uid() and m.role <> 'sahip' and x.plan <> 'pro';
 $$;
 create or replace function public.uye_mi(r uuid) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -403,13 +412,15 @@ create policy "sahip foto siler" on storage.objects for delete to authenticated
   using (bucket_id = 'urun-fotograflari' and public.foto_sahibi_mi(name));
 
 -- ---------- 8. FONKSİYON İZİNLERİ ----------
+revoke all on function public.askidaki_restoranlarim() from public;
 revoke all on function public.rolum(uuid), public.uye_mi(uuid), public.sahip_mi(uuid), public.kasa_mi(uuid),
   public.restoran_olustur(text, text), public.davet_kabul(text),
   public.siparis_olustur(bigint, jsonb, text), public.menu_getir(text), public.foto_sahibi_mi(text),
   public.plan_limiti(), public.siparis_guncelleme(), public.slug_yap(text) from public;
 grant execute on function public.rolum(uuid), public.uye_mi(uuid), public.sahip_mi(uuid), public.kasa_mi(uuid),
   public.restoran_olustur(text, text), public.davet_kabul(text),
-  public.siparis_olustur(bigint, jsonb, text), public.foto_sahibi_mi(text) to authenticated;
+  public.siparis_olustur(bigint, jsonb, text), public.foto_sahibi_mi(text),
+  public.askidaki_restoranlarim() to authenticated;
 grant execute on function public.menu_getir(text) to anon, authenticated;
 
 -- ---------- 9. CANLI BİLDİRİM (Realtime) ----------
